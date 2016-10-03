@@ -39,6 +39,7 @@
 #include "mpu6500.h"
 #include "ak8963.h"
 #include "vl53l0x.h"
+#include "grideye.h"
 
 #include "FreeRTOS.h"
 #include "semphr.h"
@@ -53,6 +54,8 @@
 #include "nvicconf.h"
 #include "ledseq.h"
 #include "sound.h"
+
+#include "stabilizer_types.h"
 
 /**
  * Enable 250Hz digital LPF mode. However does not work with
@@ -197,6 +200,11 @@ static void sensorsTask(void *param)
 
   while (1)
   {
+    if (xTaskGetTickCount() % 1000 == 0) {
+      DEBUG_PRINT("Reading GridEYE\n");
+      grideyeReadData();
+    }
+
     if (pdTRUE == xSemaphoreTake(sensorsDataReady, portMAX_DELAY))
     {
       // data is ready to be read
@@ -220,7 +228,6 @@ static void sensorsTask(void *param)
       if (range_raw < 8000) {
         range = range_raw;
       }
-
       vTaskSuspendAll(); // ensure all queues are populated at the same time
       xQueueOverwrite(accelerometerDataQueue, &sensors.acc);
       xQueueOverwrite(gyroDataQueue, &sensors.gyro);
@@ -321,6 +328,16 @@ static void sensorsDeviceInit(void)
   else
   {
     DEBUG_PRINT("VL53L0X I2C connection [FAIL].\n");
+  }
+
+  grideyeInit(I2C1_DEV);
+  if (grideyeTestConnection() == true)
+  {
+    DEBUG_PRINT("GridEYE I2C connection [OK].\n");
+  }
+  else
+  {
+    DEBUG_PRINT("GridEYE I2C connection [FAIL].\n");
   }
 
   i2cdevInit(I2C3_DEV);
