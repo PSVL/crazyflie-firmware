@@ -24,6 +24,7 @@
  *
  */
 #include <math.h>
+#include <string.h>
 
 #include "FreeRTOS.h"
 #include "task.h"
@@ -40,6 +41,7 @@
 #include "sitaw.h"
 #include "controller.h"
 #include "power_distribution.h"
+#include "crtp.h"
 
 #ifdef ESTIMATOR_TYPE_kalman
 #include "estimator_kalman.h"
@@ -56,6 +58,7 @@ static state_t state;
 static control_t control;
 
 static void stabilizerTask(void* param);
+static void sendLoggingData(void);
 
 void stabilizerInit(void)
 {
@@ -111,7 +114,7 @@ static void stabilizerTask(void* param)
   while(1) {
     vTaskDelayUntil(&lastWakeTime, F2T(RATE_MAIN_LOOP));
 
-    getExtPosition(&state);
+    //getExtPosition(&state);
 #ifdef ESTIMATOR_TYPE_kalman
     stateEstimatorUpdate(&state, &sensorData, &control);
 #else
@@ -125,8 +128,82 @@ static void stabilizerTask(void* param)
 
     stateController(&control, &sensorData, &state, &setpoint, tick);
     powerDistribution(&control);
+    sendLoggingData();
 
     tick++;
+  }
+}
+
+void sendLoggingData()
+{
+  static float acc_avg[3] = {};
+  static float gyro_avg[3] = {};
+  static float mag_avg[3] = {};
+  static float pos_avg[3] = {};
+  static float vel_avg[3] = {};
+  static float baro_avg = 0.0f;
+  static uint8_t samples = 0;
+
+  for (uint8_t i = 0; i < 3; i++) {
+    acc_avg[i]  += sensorData.acc.axis[i];
+    gyro_avg[i] += sensorData.gyro.axis[i];
+    mag_avg[i]  += sensorData.mag.axis[i];
+  }
+  pos_avg[0]    += state.position.x;
+  pos_avg[1]    += state.position.y;
+  pos_avg[2]    += state.position.z;
+  vel_avg[0]    += state.velocity.x;
+  vel_avg[1]    += state.velocity.y;
+  vel_avg[2]    += state.velocity.z;
+  baro_avg      += sensorData.baro.asl;
+  samples++;
+
+  if (RATE_DO_EXECUTE(100, xTaskGetTickCount())) {
+    float acc_out[3];
+    float gyro_out[3];
+    float mag_out[3];
+    float pos_out[3];
+    float vel_out[3];
+    float baro_out;
+
+    if (samples > 0) {
+      for (uint8_t i = 0; i < 3; i++) {
+        acc_out[i]  = acc_avg[i]  / samples;
+        gyro_out[i] = gyro_avg[i] / samples;
+        mag_out[i]  = mag_avg[i]  / samples;
+        pos_out[i]  = pos_avg[i]  / samples;
+        vel_out[i]  = vel_avg[i]  / samples;
+        acc_avg[i]  = 0.0f;
+        gyro_avg[i] = 0.0f;
+        mag_avg[i]  = 0.0f;
+        pos_out[i]  = 0.0f;
+        vel_out[i]  = 0.0f;
+      }
+      baro_out = baro_avg / samples;
+      baro_avg = 0.0f;
+      samples = 0;
+    }
+
+    CRTPPacket p = {};
+    p.port = CRTP_PORT_IMU;
+    memcpy(p.data, acc_out, sizeof(float)*3);
+    memcpy(p.data+sizeof(float)*3, gyro_out, sizeof(float)*3);
+    p.size = sizeof(float)*6;
+    crtpSendPacket(&p);
+
+    CRTPPacket d = {};
+    d.port = CRTP_PORT_MAG_BARO;
+    memcpy(d.data, mag_out, sizeof(float)*3);
+    memcpy(d.data+sizeof(float)*3, &baro_out, sizeof(float));
+    d.size = sizeof(float)*4;
+    crtpSendPacket(&d);
+
+    CRTPPacket c = {};
+    c.port = CRTP_PORT_STATE;
+    memcpy(d.data, pos_out, sizeof(float)*3);
+    memcpy(d.data+sizeof(float)*3, vel_out, sizeof(float));
+    d.size = sizeof(float)*6;
+    crtpSendPacket(&c);
   }
 }
 
