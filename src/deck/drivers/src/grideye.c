@@ -182,7 +182,7 @@ static float pixel_to_temp(uint8_t reg, float scale)
 
 static const DeckDriver grideye_deck = {
   .vid = 0xBC,
-  .pid = 0xFF,
+  .pid = 0xFE,
   .name = "bcGRIDEYE",
   .usedGpio = 0, // FIXME: set the used pins
 
