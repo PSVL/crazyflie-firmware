@@ -57,6 +57,9 @@
 #define GRIDEYE_THERM_SCALE 0.0625f
 #define GRIDEYE_PIXEL_SCALE 0.25f
 
+#pragma GCC diagnostic ignored "-Wunused-function"
+#pragma GCC diagnostic push
+
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;
 static bool isInit;
@@ -66,14 +69,13 @@ static bool grideyeTest(void);
 static bool grideyeTestConnection();
 static void grideyeTask(void *param);
 
-static void send_pixel_packet(uint8_t index, uint8_t data);
-static float pixel_to_temp(uint8_t pixel);
+static void send_pixel_packet(uint8_t index, uint8_t* data);
+static uint8_t read_pixel(uint8_t reg);
 static float pixel_to_temp(uint8_t pixel, float scale);
 
 typedef struct {
-  uint16_t row    : 2;
-  uint16_t column : 2;
-  uint16_t value  : 12;
+  uint8_t row;
+  uint8_t pixels[16];
 } __attribute__ ((packed)) pixelPayload_t;
 
 static void grideyeInit(DeckInfo *info)
@@ -130,61 +132,53 @@ static void grideyeTask(void *param)
 {
   systemWaitStart();
   TickType_t xLastWakeTime;
-  static int16_t pixels[8*8] = {};
+  static uint8_t pixels[8*8] = {};
 
   while (1) {
     xLastWakeTime = xTaskGetTickCount();
-    float celsiusTherm = pixel_to_temp(GRIDEYE_RA_THERM_LOW, GRIDEYE_THERM_SCALE);
-
     for (uint16_t i = GRIDEYE_RA_PIXEL_0_LOW;
         i < GRIDEYE_RA_PIXEL_63_HIGH; i+=2) {
 
       pixels[(i-GRIDEYE_RA_PIXEL_0_LOW)>>1] = read_pixel(i);
       //send_pixel_packet(((i-GRIDEYE_RA_PIXEL_0_LOW)>>1), (uint8_t)celsius);
     }
-    for (uint8_t i = 0; i < 8*8; i++) {
-      send_pixel_packet(i, pixels[i]);
+    for (uint8_t i = 0; i < 4; i++) {
+      send_pixel_packet(i*16, &(pixels[i*16]));
     }
     vTaskDelayUntil(&xLastWakeTime, M2T(1000));
   }
 }
 
-static void send_pixel_packet(uint8_t index, uint16_t data)
+static void send_pixel_packet(uint8_t index, uint8_t* data)
 {
   CRTPPacket packet = {};
   packet.port = CRTP_PORT_IMAGE;
-  pixelPayload_t p = {};
-  p.column = index % 8;
-  p.row = (uint8_t)(index / 8.0f);
-  p.value = data;
-  memcpy(packet.data, &p, sizeof(p));
-  packet.size = sizeof(p) + sizeof(packet.header);
+  packet.data[0] = (uint8_t)(index / 8.0f);
+  memcpy(packet.data+1, data, sizeof(pixelPayload_t)-1);
+  packet.size = sizeof(pixelPayload_t)+1;
   crtpSendPacket(&packet);
 }
 
-static uint16_t read_pixel(uint8_t reg)
+static uint8_t read_pixel(uint8_t reg)
 {
   // Read high and low registers
   uint8_t pixel[2] = {};
   i2cdevRead(I2Cx, devAddr, reg, 2, (uint8_t*)&pixel);
-
-  return ((pixel[1] << 8) | pixel[0]) & GRIDEYE_DATA_MASK;
+  uint16_t ret = (uint16_t)((pixel[1] << 8) | pixel[0]) & GRIDEYE_DATA_MASK;
+  return (uint8_t)(ret);
 }
 
-static int16_t pixel_to_temp(uint8_t reg)
+static float pixel_to_temp(uint8_t reg, float scale)
 {
   int16_t temp = read_pixel(reg);
   // Temperature data is in 2's compliment
   if ((temp & GRIDEYE_SIGN_BIT) != 0) {
     temp -= GRIDEYE_SIGN_BIT;
   }
-  return temp;
+  return temp * scale;
 }
 
-static float pixel_to_temp(uint8_t reg, float scale)
-{
-  return pixel_to_temp(reg) * scale;
-}
+#pragma GCC diagnostic pop
 
 static const DeckDriver grideye_deck = {
   .vid = 0xBC,
