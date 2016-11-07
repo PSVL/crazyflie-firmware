@@ -34,6 +34,8 @@
 #include "i2cdev.h"
 #include "crtp.h"
 
+#include "grideye.h"
+
 #define GRIDEYE_DEFAULT_ADDRESS 0b1101000
 
 #define GRIDEYE_RA_OPERATING_MODE 0x00
@@ -128,18 +130,50 @@ static bool grideyeTestConnection()
   return ret;
 }
 
+enum {
+  ROTATION_NONE,
+  ROTATION_90_CW,
+  ROTATION_180_CW,
+  ROTATION_270_CW,
+};
+
 static void grideyeTask(void *param)
 {
   systemWaitStart();
   TickType_t xLastWakeTime;
   static uint8_t pixels[8*8] = {};
+  static const uint8_t rotation = ROTATION_270_CW;
 
   while (1) {
     xLastWakeTime = xTaskGetTickCount();
     for (uint16_t i = GRIDEYE_RA_PIXEL_0_LOW;
         i < GRIDEYE_RA_PIXEL_63_HIGH; i+=2) {
 
-      pixels[(i-GRIDEYE_RA_PIXEL_0_LOW)>>1] = read_pixel(i);
+      uint8_t index = (i - GRIDEYE_RA_PIXEL_0_LOW) >> 1;
+      uint8_t row    = index / 8;
+      uint8_t column = index % 8;
+      uint8_t temp;
+      switch (rotation) {
+        case ROTATION_90_CW:
+          temp = column;
+          column = 7 - row;
+          row = temp;
+          break;
+        case ROTATION_180_CW:
+          column = 7 - column;
+          row = 7 - row;
+          break;
+        case ROTATION_270_CW:
+          temp = row;
+          row = 7 - column;
+          column = temp;
+          break;
+        case ROTATION_NONE:
+        default:
+          break;
+      }
+      index = row * 8 + column;
+      pixels[index] = read_pixel(i);
       //send_pixel_packet(((i-GRIDEYE_RA_PIXEL_0_LOW)>>1), (uint8_t)celsius);
     }
     for (uint8_t i = 0; i < 4; i++) {
@@ -147,6 +181,11 @@ static void grideyeTask(void *param)
     }
     vTaskDelayUntil(&xLastWakeTime, M2T(1000));
   }
+}
+
+void grideyeGetSetpoint(setpoint_t *setpoint, const state_t* state)
+{
+  // TODO: Implement setpoint modification
 }
 
 static void send_pixel_packet(uint8_t index, uint8_t* data)
