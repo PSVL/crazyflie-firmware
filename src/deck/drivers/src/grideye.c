@@ -184,7 +184,7 @@ static void grideyeTask(void *param)
   }
 }
 
-void grideyeGetSetpoint(setpoint_t *setpoint, const state_t* state)
+void grideyeSetpointAdjust(setpoint_t *setpoint, const state_t* state)
 {
   // TODO: Implement setpoint modification
 }
