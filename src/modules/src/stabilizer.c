@@ -41,6 +41,8 @@
 #include "controller.h"
 #include "power_distribution.h"
 
+#include "grideye.h"
+
 #ifdef ESTIMATOR_TYPE_kalman
 #include "estimator_kalman.h"
 #else
@@ -120,6 +122,7 @@ static void stabilizerTask(void* param)
 #endif
 
     commanderGetSetpoint(&setpoint, &state);
+    grideyeSetpointAdjust(&setpoint, &state);
 
     sitAwUpdateSetpoint(&setpoint, &sensorData, &state);
 
