@@ -52,6 +52,8 @@
 #include "ledseq.h"
 #include "sound.h"
 #include "filter.h"
+#include "crtp.h"
+#include <string.h>
 
 /**
  * Enable 250Hz digital LPF mode. However does not work with
@@ -302,6 +304,15 @@ void processAccGyroMeasurements(const uint8_t *buffer)
   accScaled.z =  (az) * SENSORS_G_PER_LSB_CFG / accScale;
   sensorsAccAlignToGravity(&accScaled, &sensors.acc);
   applyAxis3fLpf((lpf2pData*)(&accLpf), &sensors.acc);
+
+  static uint8_t transmit = 0;
+  if (transmit++ % 4 == 0) {
+    CRTPPacket p = {};
+    p.port = CRTP_PORT_DEBUG;
+    memcpy(p.data, sensors.acc.axis, sizeof(float)*3);
+    p.size = sizeof(float)*3 + sizeof(p.header);
+    crtpSendPacket(&p);
+  }
 }
 
 static void sensorsDeviceInit(void)
