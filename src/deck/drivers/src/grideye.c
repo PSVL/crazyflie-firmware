@@ -174,6 +174,7 @@ static void grideyeTask(void *param)
       }
       index = row * 8 + column;
       pixels[index] = read_pixel(i);
+      // TODO: Need a sleep in here to fly
       //send_pixel_packet(((i-GRIDEYE_RA_PIXEL_0_LOW)>>1), (uint8_t)celsius);
     }
     for (uint8_t i = 0; i < 4; i++) {
