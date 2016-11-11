@@ -83,22 +83,19 @@ static lpsAlgoOptions_t algoOptions = {
   },
   .antennaDelay = (ANTENNA_OFFSET*499.2e6*128)/299792458.0, // In radio tick
   .rangingFailedThreshold = 6,
- 
-  .anchorPositionOk = false,
+  //.anchorPositionOk = false,
 
   // To set a static anchor position from startup, uncomment and modify the
   // following code:
-/*
   .anchorPosition = {
-    {x: 0.99, y: 1.49, z: 1.80},
-    {x: 0.99, y: 3.29, z: 1.80},
-    {x: 4.67, y: 2.54, z: 1.80},
-    {x: 0.59, y: 2.27, z: 0.20},
-    {x: 4.70, y: 3.38, z: 0.20},
-    {x: 4.70, y: 1.14, z: 0.20},
+    {x:  0.3917, y: -2.8492, z: 1.7522},
+    {x: -3.1565, y:  1.0464, z: 1.7651},
+    {x:  0.3651, y:  2.9528, z: 0.3263},
+    {x:  1.4102, y:  1.6314, z: 0.1642},
+    {x:  1.7877, y:  0.1802, z: 2.0485},
+    {x: -1.1886, y: -2.3995, z: 0.5894},
   },
   .anchorPositionOk = true,
-*/
 };
 
 #if LPS_TDOA_ENABLE
