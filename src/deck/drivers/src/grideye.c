@@ -30,6 +30,7 @@
 #include "deck.h"
 #include "system.h"
 #include "debug.h"
+#include "param.h"
 
 #include "i2cdev.h"
 #include "crtp.h"
@@ -65,6 +66,9 @@
 static uint8_t devAddr;
 static I2C_Dev *I2Cx;
 static bool isInit;
+
+static bool continuousMode = false;
+static bool getNewFrame = false;
 
 static void grideyeInit(DeckInfo *info);
 static bool grideyeTest(void);
@@ -146,6 +150,16 @@ static void grideyeTask(void *param)
 
   while (1) {
     xLastWakeTime = xTaskGetTickCount();
+    if (continuousMode == false && getNewFrame == false) {
+      for (uint8_t i = 0; i < 4; i++) {
+        send_pixel_packet(i*16, &(pixels[i*16]));
+        vTaskDelay(M2T(10));
+      }
+      vTaskDelayUntil(&xLastWakeTime, M2T(1000));
+      continue;
+    }
+    DEBUG_PRINT("GRIDEYE: Reading frame\n");
+    getNewFrame = false;
     for (uint16_t i = GRIDEYE_RA_PIXEL_0_LOW;
         i < GRIDEYE_RA_PIXEL_63_HIGH; i+=2) {
 
@@ -174,11 +188,15 @@ static void grideyeTask(void *param)
       }
       index = row * 8 + column;
       pixels[index] = read_pixel(i);
+      if (i % 32 == 0) {
+        vTaskDelay(M2T(100));
+      }
       // TODO: Need a sleep in here to fly
       //send_pixel_packet(((i-GRIDEYE_RA_PIXEL_0_LOW)>>1), (uint8_t)celsius);
     }
     for (uint8_t i = 0; i < 4; i++) {
       send_pixel_packet(i*16, &(pixels[i*16]));
+      vTaskDelay(M2T(10));
     }
     vTaskDelayUntil(&xLastWakeTime, M2T(1000));
   }
@@ -221,9 +239,9 @@ static float pixel_to_temp(uint8_t reg, float scale)
 #pragma GCC diagnostic pop
 
 static const DeckDriver grideye_deck = {
-  .vid = 0xBC,
-  .pid = 0xFE,
-  .name = "bcGRIDEYE",
+  .vid = 0x00,
+  .pid = 0x00,
+  .name = "grideye",
   .usedGpio = 0, // FIXME: set the used pins
 
   .init = grideyeInit,
@@ -231,4 +249,9 @@ static const DeckDriver grideye_deck = {
 };
 
 DECK_DRIVER(grideye_deck);
+
+PARAM_GROUP_START(grideye)
+PARAM_ADD(PARAM_UINT8, continuousMode, &continuousMode)
+PARAM_ADD(PARAM_UINT8, getNewFrame, &getNewFrame)
+PARAM_GROUP_STOP(grideye)
 
