@@ -88,12 +88,12 @@ static lpsAlgoOptions_t algoOptions = {
   // To set a static anchor position from startup, uncomment and modify the
   // following code:
   .anchorPosition = {
-    {x:  0.3917, y: -2.8492, z: 1.7522},
-    {x: -3.1565, y:  1.0464, z: 1.7651},
-    {x:  0.3651, y:  2.9528, z: 0.3263},
-    {x:  1.4102, y:  1.6314, z: 0.1642},
-    {x:  1.7877, y:  0.1802, z: 2.0485},
-    {x: -1.1886, y: -2.3995, z: 0.5894},
+    {x: -0.4651, y: -2.7986, z: 0.2385},
+    {x:  2.2360, y: -1.3838, z: 2.3344},
+    {x: -1.6284, y:  2.1121, z: 0.2400},
+    {x:  2.0953, y: -0.0058, z: 0.1564},
+    {x:  2.2097, y:  1.4719, z: 1.9151},
+    {x: -2.5529, y:  0.6961, z: 2.0750},
   },
   .anchorPositionOk = true,
 };
