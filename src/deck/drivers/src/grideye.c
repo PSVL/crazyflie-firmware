@@ -188,15 +188,13 @@ static void grideyeTask(void *param)
       }
       index = row * 8 + column;
       pixels[index] = read_pixel(i);
-      if (i % 32 == 0) {
-        vTaskDelay(M2T(100));
-      }
+      vTaskDelay(M2T(5));
       // TODO: Need a sleep in here to fly
       //send_pixel_packet(((i-GRIDEYE_RA_PIXEL_0_LOW)>>1), (uint8_t)celsius);
     }
     for (uint8_t i = 0; i < 4; i++) {
       send_pixel_packet(i*16, &(pixels[i*16]));
-      vTaskDelay(M2T(10));
+      vTaskDelay(M2T(5));
     }
     vTaskDelayUntil(&xLastWakeTime, M2T(1000));
   }
