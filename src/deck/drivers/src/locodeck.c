@@ -90,8 +90,8 @@ static lpsAlgoOptions_t algoOptions = {
   .anchorPosition = {
     {x: -0.4651, y: -2.7986, z: 0.2385},
     {x:  2.2360, y: -1.3838, z: 2.3344},
-    {x: -1.6284, y:  2.1121, z: 0.2400},
-    {x:  2.0953, y: -0.0058, z: 0.1564},
+    {x: -1.5648, y:  2.1100, z: 0.2413},
+    {x:  1.9312, y: -0.4835, z: 0.2369},
     {x:  2.2097, y:  1.4719, z: 1.9151},
     {x: -2.5529, y:  0.6961, z: 2.0750},
   },
@@ -273,7 +273,7 @@ static void dwm1000Init(DeckInfo *info)
     return;
   }
 
-  dwEnableAllLeds(dwm);
+  //dwEnableAllLeds(dwm);
 
   dwTime_t delay = {.full = 0};
   dwSetAntenaDelay(dwm, delay);
